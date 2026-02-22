@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FastData Hub - Data Bundle Reseller</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f4f6f9;}
+header{background:#0066cc;color:white;padding:15px;text-align:center;}
+nav{background:#003366;padding:10px;text-align:center;}
+nav a{color:white;margin:15px;text-decoration:none;font-weight:bold;}
+.container{width:90%;margin:auto;padding:20px;}
+.card{background:white;padding:20px;margin:15px 0;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+button{padding:10px 15px;background:#0066cc;color:white;border:none;border-radius:5px;cursor:pointer;}
+button:hover{background:#004999;}
+input,select{padding:8px;width:100%;margin:8px 0;}
+footer{background:#003366;color:white;text-align:center;padding:10px;margin-top:20px;}
+.hidden{display:none;}
+table{width:100%;border-collapse:collapse;}
+table,th,td{border:1px solid #ccc;}
+th,td{padding:8px;text-align:left;}
+</style>
+</head>
+<body>
+
+<header>
+<h1>King Fresh FastData Hub</h1>
+<p>Cheap & Instant Data Bundles in Ghana</p>
+</header>
+
+<nav>
+<a href="#" onclick="showHome()">Home</a>
+<a href="#" onclick="showOrder()">Buy Data</a>
+<a href="#" onclick="showAdmin()">Admin</a>
+</nav>
+
+<div class="container">
+
+<!-- HOME -->
+<div id="homeSection" class="card">
+<h2>Welcome to FastData Hub</h2>
+<p>We sell affordable MTN, Telecel & AirtelTigo data bundles instantly.</p>
+<ul>
+<li>✔ Fast delivery</li>
+<li>✔ 24/7 Service</li>
+<li>✔ Secure payments</li>
+</ul>
+</div>
+
+<!-- ORDER -->
+<div id="orderSection" class="card hidden">
+<h2>Buy Data Bundle</h2>
+<label>Select Network</label>
+<select id="network">
+<option>MTN</option>
+<option>Telecel</option>
+<option>AirtelTigo</option>
+</select>
+
+<label>Select Bundle</label>
+<select id="bundle">
+<option value="5">1GB - GHS 5</option>
+<option value="10">2GB - GHS 10</option>
+<option value="20">5GB - GHS 20</option>
+<option value="40">10GB - GHS 40</option>
+</select>
+
+<label>Phone Number</label>
+<input type="text" id="phone" placeholder="Enter customer phone number">
+
+<label>Your Name</label>
+<input type="text" id="name" placeholder="Enter your name">
+
+<button onclick="submitOrder()">Place Order</button>
+<div id="orderSummary" class="card hidden"></div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminSection" class="card hidden">
+<h2>Admin Login</h2>
+<input type="text" id="adminUser" placeholder="Username">
+<input type="password" id="adminPass" placeholder="Password">
+<button onclick="adminLogin()">Login</button>
+
+<div id="adminPanel" class="hidden card">
+<h3>Orders</h3>
+<table>
+<thead>
+<tr><th>Name</th><th>Phone</th><th>Network</th><th>Bundle</th><th>Reference</th></tr>
+</thead>
+<tbody id="orderList"></tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+<footer>
+© 2026 King Fresh FastData Hub | Data Reselling Platform
+</footer>
+
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script>
+let orders=[];
+
+function showHome(){hideAll();document.getElementById("homeSection").classList.remove("hidden");}
+function showOrder(){hideAll();document.getElementById("orderSection").classList.remove("hidden");}
+function showAdmin(){hideAll();document.getElementById("adminSection").classList.remove("hidden");}
+function hideAll(){document.getElementById("homeSection").classList.add("hidden");document.getElementById("orderSection").classList.add("hidden");document.getElementById("adminSection").classList.add("hidden");}
+
+function submitOrder(){
+    let network=document.getElementById("network").value;
+    let bundleText=document.getElementById("bundle");
+    let bundlePrice=bundleText.value;
+    let bundleName=bundleText.options[bundleText.selectedIndex].text;
+    let phone=document.getElementById("phone").value;
+    let name=document.getElementById("name").value;
+    if(phone===""||name===""){alert("Please fill all fields");return;}
+    payWithPaystack(name, phone, network, bundleName, bundlePrice);
+}
+
+function payWithPaystack(name,phone,network,bundleName,bundlePrice){
+    let handler=PaystackPop.setup({
+        key:'pk_live_19c23d4809beb2c272365eb1d0d22d3e8cd7fd9f', // 🔴 Replace with your public key
+        email:name+"@fastdata.com",
+        amount:bundlePrice*100,
+        currency:"GHS",
+        channels:['mobile_money'], // Only MoMo
+        ref:'FDH_'+Math.floor((Math.random()*1000000000)+1),
+        callback:function(response){
+            let order={name:name,phone:phone,network:network,bundle:bundleName,ref:response.reference};
+            orders.push(order);
+            document.getElementById("orderSummary").innerHTML=`
+            <h3>Payment Successful ✅</h3>
+            <p><b>Name:</b> ${name}</p>
+            <p><b>Network:</b> ${network}</p>
+            <p><b>Bundle:</b> ${bundleName}</p>
+            <p><b>Phone:</b> ${phone}</p>
+            <p><b>Reference:</b> ${response.reference}</p>
+            <p>Data will be delivered shortly.</p>`;
+            document.getElementById("orderSummary").classList.remove("hidden");
+        },
+        onClose:function(){alert("Transaction was cancelled.");}
+    });
+    handler.openIframe();
+}
+
+function adminLogin(){
+    let user=document.getElementById("adminUser").value;
+    let pass=document.getElementById("adminPass").value;
+    if(user==="admin"&&pass==="1234"){
+        document.getElementById("adminPanel").classList.remove("hidden");
+        updateOrderList();
+    }else{alert("Wrong login details");}
+}
+
+function updateOrderList(){
+    let tbody=document.getElementById("orderList");
+    tbody.innerHTML="";
+    orders.forEach(o=>{
+        let tr=document.createElement("tr");
+        tr.innerHTML=`<td>${o.name}</td><td>${o.phone}</td><td>${o.network}</td><td>${o.bundle}</td><td>${o.ref}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+</script>
+</body>
+</html>
